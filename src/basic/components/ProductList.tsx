@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product } from '../../types';
+import { Product, CartItem } from '../../types';
 import { ProductCard } from './ProductCard';
 
 interface ProductWithUI extends Product {
@@ -11,7 +11,7 @@ interface ProductListProps {
   products: ProductWithUI[];
   filteredProducts: ProductWithUI[];
   debouncedSearchTerm: string;
-  cart: Array<{ product: { id: string }; quantity: number }>;
+  cart: CartItem[];
   formatPrice: (price: number, productId?: string) => string;
   addToCart: (product: ProductWithUI) => void;
 }

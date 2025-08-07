@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product } from '../../types';
+import { Product, CartItem } from '../../types';
 import { getRemainingStock } from '../utils';
 
 interface ProductWithUI extends Product {
@@ -9,7 +9,7 @@ interface ProductWithUI extends Product {
 
 interface ProductCardProps {
   product: ProductWithUI;
-  cart: Array<{ product: { id: string }; quantity: number }>;
+  cart: CartItem[];
   formatPrice: (price: number, productId?: string) => string;
   addToCart: (product: ProductWithUI) => void;
 }

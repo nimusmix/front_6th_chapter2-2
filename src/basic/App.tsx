@@ -123,7 +123,6 @@ const App = () => {
     getCartTotal
   );
   const { addProduct, updateProduct, deleteProduct } = useProduct(
-    products,
     setProducts,
     addNotification
   );
