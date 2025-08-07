@@ -1,6 +1,20 @@
-import { useState, useCallback } from 'react';
+import { Provider, useAtom } from 'jotai';
+import { useCallback } from 'react';
 
-import { Coupon, Product } from '../types';
+import {
+  productsAtom,
+  couponsAtom,
+  selectedCouponAtom,
+  isAdminAtom,
+  showCouponFormAtom,
+  activeTabAtom,
+  showProductFormAtom,
+  editingProductAtom,
+  productFormAtom,
+  couponFormAtom,
+  cartAtom,
+  notificationsAtom,
+} from './atoms';
 import {
   Header,
   ProductList,
@@ -10,190 +24,203 @@ import {
   ProductManagement,
   CouponManagement,
 } from './components';
-import {
-  useLocalStorage,
-  useNotification,
-  useSearch,
-  useCart,
-  useCoupon,
-  useProduct,
-} from './hooks';
-import { calculateCartTotal, formatPrice as formatPriceUtil, filterProducts } from './utils';
-
-interface ProductWithUI extends Product {
-  description?: string;
-  isRecommended?: boolean;
-}
-
-// 초기 데이터
-const initialProducts: ProductWithUI[] = [
-  {
-    id: 'p1',
-    name: '상품1',
-    price: 10000,
-    stock: 20,
-    discounts: [
-      { quantity: 10, rate: 0.1 },
-      { quantity: 20, rate: 0.2 },
-    ],
-    description: '최고급 품질의 프리미엄 상품입니다.',
-  },
-  {
-    id: 'p2',
-    name: '상품2',
-    price: 20000,
-    stock: 20,
-    discounts: [{ quantity: 10, rate: 0.15 }],
-    description: '다양한 기능을 갖춘 실용적인 상품입니다.',
-    isRecommended: true,
-  },
-  {
-    id: 'p3',
-    name: '상품3',
-    price: 30000,
-    stock: 20,
-    discounts: [
-      { quantity: 10, rate: 0.2 },
-      { quantity: 30, rate: 0.25 },
-    ],
-    description: '대용량과 고성능을 자랑하는 상품입니다.',
-  },
-];
-
-const initialCoupons: Coupon[] = [
-  {
-    name: '5000원 할인',
-    code: 'AMOUNT5000',
-    discountType: 'amount',
-    discountValue: 5000,
-  },
-  {
-    name: '10% 할인',
-    code: 'PERCENT10',
-    discountType: 'percentage',
-    discountValue: 10,
-  },
-];
+import { calculateCartTotal, formatPrice as formatPriceUtil } from './utils';
 
 const App = () => {
-  // 커스텀 훅들 사용
-  const [products, setProducts] = useLocalStorage<ProductWithUI[]>('products', initialProducts);
-  const [coupons, setCoupons] = useLocalStorage<Coupon[]>('coupons', initialCoupons);
-  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [showCouponForm, setShowCouponForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'products' | 'coupons'>('products');
-  const [showProductForm, setShowProductForm] = useState(false);
-
-  // Admin
-  const [editingProduct, setEditingProduct] = useState<string | null>(null);
-  const [productForm, setProductForm] = useState({
-    name: '',
-    price: 0,
-    stock: 0,
-    description: '',
-    discounts: [] as Array<{ quantity: number; rate: number }>,
-  });
-
-  const [couponForm, setCouponForm] = useState({
-    name: '',
-    code: '',
-    discountType: 'amount' as 'amount' | 'percentage',
-    discountValue: 0,
-  });
-
-  // 커스텀 훅들
-  const { notifications, addNotification, removeNotification } = useNotification();
-  const { searchTerm, setSearchTerm, debouncedSearchTerm } = useSearch();
-  const {
-    cart,
-    totalItemCount,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getCartTotal,
-  } = useCart(products, addNotification);
-  const { addCoupon, deleteCoupon, applyCoupon } = useCoupon(
-    coupons,
-    setCoupons,
-    selectedCoupon,
-    setSelectedCoupon,
-    addNotification,
-    getCartTotal
+  return (
+    <Provider>
+      <AppContent />
+    </Provider>
   );
-  const { addProduct, updateProduct, deleteProduct } = useProduct(
-    products,
-    setProducts,
-    addNotification
+};
+
+const AppContent = () => {
+  // Atoms 사용
+  const [products, setProducts] = useAtom(productsAtom);
+  const [coupons, setCoupons] = useAtom(couponsAtom);
+  const [selectedCoupon, setSelectedCoupon] = useAtom(selectedCouponAtom);
+  const [isAdmin] = useAtom(isAdminAtom);
+  const [showCouponForm, setShowCouponForm] = useAtom(showCouponFormAtom);
+  const [activeTab, setActiveTab] = useAtom(activeTabAtom);
+  const [showProductForm, setShowProductForm] = useAtom(showProductFormAtom);
+  const [editingProduct, setEditingProduct] = useAtom(editingProductAtom);
+  const [productForm, setProductForm] = useAtom(productFormAtom);
+  const [couponForm, setCouponForm] = useAtom(couponFormAtom);
+  const [cart, setCart] = useAtom(cartAtom);
+  const [, setNotifications] = useAtom(notificationsAtom);
+
+  // Notification functions
+  const addNotification = useCallback(
+    (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+      const notification = {
+        id: Date.now().toString(),
+        message,
+        type,
+        timestamp: Date.now(),
+      };
+      setNotifications((prev) => [...prev, notification]);
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+      }, 3000);
+    },
+    [setNotifications]
   );
 
-  const formatPrice = (price: number, productId?: string): string => {
-    return formatPriceUtil(price, productId, products, cart, isAdmin);
-  };
+  const clearCart = useCallback(() => {
+    setCart([]);
+  }, [setCart]);
+
+  // Coupon functions
+  const addCoupon = useCallback(
+    (couponData: typeof couponForm) => {
+      const newCoupon: (typeof coupons)[0] = {
+        name: couponData.name,
+        code: couponData.code,
+        discountType: couponData.discountType,
+        discountValue: couponData.discountValue,
+      };
+      setCoupons((prev) => [...prev, newCoupon]);
+      addNotification('쿠폰이 추가되었습니다.', 'success');
+    },
+    [setCoupons, addNotification]
+  );
+
+  const deleteCoupon = useCallback(
+    (code: string) => {
+      setCoupons((prev) => prev.filter((c) => c.code !== code));
+      addNotification('쿠폰이 삭제되었습니다.', 'warning');
+    },
+    [setCoupons, addNotification]
+  );
+
+  const applyCoupon = useCallback(
+    (coupon: (typeof coupons)[0]) => {
+      setSelectedCoupon(coupon);
+      addNotification('쿠폰이 적용되었습니다.', 'success');
+    },
+    [setSelectedCoupon, addNotification]
+  );
+
+  // Product functions
+  const addProduct = useCallback(
+    (productData: typeof productForm) => {
+      const newProduct = {
+        id: `p${Date.now()}`,
+        name: productData.name,
+        price: productData.price,
+        stock: productData.stock,
+        description: productData.description,
+        discounts: productData.discounts,
+      };
+      setProducts((prev) => [...prev, newProduct]);
+      addNotification('상품이 추가되었습니다.', 'success');
+    },
+    [setProducts, addNotification]
+  );
+
+  const updateProduct = useCallback(
+    (productId: string, productData: typeof productForm) => {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === productId
+            ? {
+                ...p,
+                name: productData.name,
+                price: productData.price,
+                stock: productData.stock,
+                description: productData.description,
+                discounts: productData.discounts,
+              }
+            : p
+        )
+      );
+      addNotification('상품이 수정되었습니다.', 'success');
+    },
+    [setProducts, addNotification]
+  );
+
+  const deleteProduct = useCallback(
+    (productId: string) => {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      addNotification('상품이 삭제되었습니다.', 'warning');
+    },
+    [setProducts, addNotification]
+  );
+
+  const formatPrice = useCallback(
+    (price: number, productId?: string): string => {
+      return formatPriceUtil(price, productId, products, cart, isAdmin);
+    },
+    [products, cart, isAdmin]
+  );
 
   const completeOrder = useCallback(() => {
     const orderNumber = `ORD-${Date.now()}`;
     addNotification(`주문이 완료되었습니다. 주문번호: ${orderNumber}`, 'success');
     clearCart();
     setSelectedCoupon(null);
-  }, [addNotification, clearCart]);
+  }, [addNotification, clearCart, setSelectedCoupon]);
 
-  const handleProductSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingProduct && editingProduct !== 'new') {
-      updateProduct(editingProduct, productForm);
+  const handleProductSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (editingProduct && editingProduct !== 'new') {
+        updateProduct(editingProduct, productForm);
+        setEditingProduct(null);
+      } else {
+        addProduct(productForm);
+      }
+      setProductForm({ name: '', price: 0, stock: 0, description: '', discounts: [] });
       setEditingProduct(null);
-    } else {
-      addProduct({
-        ...productForm,
-        discounts: productForm.discounts,
+      setShowProductForm(false);
+    },
+    [
+      editingProduct,
+      productForm,
+      updateProduct,
+      addProduct,
+      setProductForm,
+      setEditingProduct,
+      setShowProductForm,
+    ]
+  );
+
+  const handleCouponSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      addCoupon(couponForm);
+      setCouponForm({
+        name: '',
+        code: '',
+        discountType: 'amount',
+        discountValue: 0,
       });
-    }
-    setProductForm({ name: '', price: 0, stock: 0, description: '', discounts: [] });
-    setEditingProduct(null);
-    setShowProductForm(false);
-  };
+      setShowCouponForm(false);
+    },
+    [addCoupon, couponForm, setCouponForm, setShowCouponForm]
+  );
 
-  const handleCouponSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    addCoupon(couponForm);
-    setCouponForm({
-      name: '',
-      code: '',
-      discountType: 'amount',
-      discountValue: 0,
-    });
-    setShowCouponForm(false);
-  };
-
-  const startEditProduct = (product: ProductWithUI) => {
-    setEditingProduct(product.id);
-    setProductForm({
-      name: product.name,
-      price: product.price,
-      stock: product.stock,
-      description: product.description || '',
-      discounts: product.discounts || [],
-    });
-    setShowProductForm(true);
-  };
+  const startEditProduct = useCallback(
+    (product: (typeof products)[0]) => {
+      setEditingProduct(product.id);
+      setProductForm({
+        name: product.name,
+        price: product.price,
+        stock: product.stock,
+        description: product.description || '',
+        discounts: product.discounts || [],
+      });
+      setShowProductForm(true);
+    },
+    [setEditingProduct, setProductForm, setShowProductForm]
+  );
 
   const totals = calculateCartTotal(cart, selectedCoupon);
 
-  const filteredProducts = filterProducts(products, debouncedSearchTerm);
-
   return (
     <div className='min-h-screen bg-gray-50'>
-      <NotificationList notifications={notifications} removeNotification={removeNotification} />
-      <Header
-        isAdmin={isAdmin}
-        setIsAdmin={setIsAdmin}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        cartLength={cart.length}
-        totalItemCount={totalItemCount}
-      />
+      <NotificationList />
+      <Header />
 
       <main className='max-w-7xl mx-auto px-4 py-8'>
         {isAdmin ? (
@@ -228,19 +255,12 @@ const App = () => {
         ) : (
           <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
             <div className='lg:col-span-3'>
-              <ProductList
-                products={products}
-                filteredProducts={filteredProducts}
-                debouncedSearchTerm={debouncedSearchTerm}
-                cart={cart}
-                formatPrice={formatPrice}
-                addToCart={addToCart}
-              />
+              <ProductList />
             </div>
 
             <div className='lg:col-span-1'>
               <div className='sticky top-24 space-y-4'>
-                <Cart cart={cart} removeFromCart={removeFromCart} updateQuantity={updateQuantity} />
+                <Cart />
 
                 {cart.length > 0 && (
                   <>

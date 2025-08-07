@@ -1,6 +1,9 @@
+import { useAtom, useAtomValue } from 'jotai';
 import React from 'react';
+
 import { Product } from '../../types';
-import { getRemainingStock } from '../utils';
+import { cartAtom, isAdminAtom, notificationsAtom } from '../atoms';
+import { getRemainingStock, formatPrice as formatPriceUtil } from '../utils';
 
 interface ProductWithUI extends Product {
   description?: string;
@@ -9,18 +12,43 @@ interface ProductWithUI extends Product {
 
 interface ProductCardProps {
   product: ProductWithUI;
-  cart: Array<{ product: { id: string }; quantity: number }>;
-  formatPrice: (price: number, productId?: string) => string;
-  addToCart: (product: ProductWithUI) => void;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
-  product,
-  cart,
-  formatPrice,
-  addToCart,
-}) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const cart = useAtomValue(cartAtom);
+  const isAdmin = useAtomValue(isAdminAtom);
+  const [, setCart] = useAtom(cartAtom);
+  const [, setNotifications] = useAtom(notificationsAtom);
+
   const remainingStock = getRemainingStock(product, cart);
+
+  const formatPrice = (price: number, productId?: string): string => {
+    return formatPriceUtil(price, productId, [product], cart, isAdmin);
+  };
+
+  const addToCart = (product: ProductWithUI) => {
+    setCart((prev) => {
+      const existingItem = prev.find((item) => item.product.id === product.id);
+      if (existingItem) {
+        return prev.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+
+    // 알림 메시지 추가
+    const notification = {
+      id: Date.now().toString(),
+      message: '장바구니에 담았습니다',
+      type: 'success' as const,
+      timestamp: Date.now(),
+    };
+    setNotifications((prev) => [...prev, notification]);
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    }, 3000);
+  };
 
   return (
     <div className='bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow'>

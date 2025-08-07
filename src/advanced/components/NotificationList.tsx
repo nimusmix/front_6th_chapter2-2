@@ -1,20 +1,15 @@
 import React from 'react';
+import { useAtom, useAtomValue } from 'jotai';
+import { notificationsAtom } from '../atoms';
 
-interface Notification {
-  id: string;
-  message: string;
-  type: 'error' | 'success' | 'warning';
-}
+export const NotificationList: React.FC = () => {
+  const notifications = useAtomValue(notificationsAtom);
+  const [, setNotifications] = useAtom(notificationsAtom);
 
-interface NotificationListProps {
-  notifications: Notification[];
-  removeNotification: (id: string) => void;
-}
+  const removeNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
-export const NotificationList: React.FC<NotificationListProps> = ({
-  notifications,
-  removeNotification,
-}) => {
   if (notifications.length === 0) return null;
 
   return (

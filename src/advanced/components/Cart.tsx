@@ -1,14 +1,47 @@
+import { useAtom, useAtomValue } from 'jotai';
 import React from 'react';
-import { CartItem } from '../../types';
+
+import { cartAtom, productsAtom, notificationsAtom } from '../atoms';
 import { calculateItemTotal } from '../utils';
 
-interface CartProps {
-  cart: CartItem[];
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-}
+export const Cart: React.FC = () => {
+  const cart = useAtomValue(cartAtom);
+  const products = useAtomValue(productsAtom);
+  const [, setCart] = useAtom(cartAtom);
+  const [, setNotifications] = useAtom(notificationsAtom);
 
-export const Cart: React.FC<CartProps> = ({ cart, removeFromCart, updateQuantity }) => {
+  const removeFromCart = (productId: string) => {
+    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  const updateQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+
+    // 재고 확인
+    const product = products.find((p) => p.id === productId);
+    if (product && quantity > product.stock) {
+      // 재고 초과 시 알림
+      const notification = {
+        id: Date.now().toString(),
+        message: `재고는 ${product.stock}개까지만 있습니다.`,
+        type: 'warning' as const,
+        timestamp: Date.now(),
+      };
+      setNotifications((prev) => [...prev, notification]);
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+      }, 3000);
+      return;
+    }
+
+    setCart((prev) =>
+      prev.map((item) => (item.product.id === productId ? { ...item, quantity } : item))
+    );
+  };
+
   return (
     <section className='bg-white rounded-lg border border-gray-200 p-4'>
       <h2 className='text-lg font-semibold mb-4 flex items-center'>

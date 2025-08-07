@@ -1,29 +1,13 @@
 import React from 'react';
-import { Product } from '../../types';
+import { useAtomValue } from 'jotai';
+import { productsAtom, filteredProductsAtom, searchTermAtom } from '../atoms';
 import { ProductCard } from './ProductCard';
 
-interface ProductWithUI extends Product {
-  description?: string;
-  isRecommended?: boolean;
-}
+export const ProductList: React.FC = () => {
+  const products = useAtomValue(productsAtom);
+  const filteredProducts = useAtomValue(filteredProductsAtom);
+  const searchTerm = useAtomValue(searchTermAtom);
 
-interface ProductListProps {
-  products: ProductWithUI[];
-  filteredProducts: ProductWithUI[];
-  debouncedSearchTerm: string;
-  cart: Array<{ product: { id: string }; quantity: number }>;
-  formatPrice: (price: number, productId?: string) => string;
-  addToCart: (product: ProductWithUI) => void;
-}
-
-export const ProductList: React.FC<ProductListProps> = ({
-  products,
-  filteredProducts,
-  debouncedSearchTerm,
-  cart,
-  formatPrice,
-  addToCart,
-}) => {
   return (
     <section>
       <div className='mb-6 flex justify-between items-center'>
@@ -32,18 +16,12 @@ export const ProductList: React.FC<ProductListProps> = ({
       </div>
       {filteredProducts.length === 0 ? (
         <div className='text-center py-12'>
-          <p className='text-gray-500'>"{debouncedSearchTerm}"에 대한 검색 결과가 없습니다.</p>
+          <p className='text-gray-500'>"{searchTerm}"에 대한 검색 결과가 없습니다.</p>
         </div>
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              cart={cart}
-              formatPrice={formatPrice}
-              addToCart={addToCart}
-            />
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       )}

@@ -1,22 +1,13 @@
 import React from 'react';
+import { useAtom, useAtomValue } from 'jotai';
+import { isAdminAtom, searchTermAtom, cartLengthAtom, totalItemCountAtom } from '../atoms';
 
-interface HeaderProps {
-  isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  cartLength: number;
-  totalItemCount: number;
-}
+export const Header: React.FC = () => {
+  const [isAdmin, setIsAdmin] = useAtom(isAdminAtom);
+  const [searchTerm, setSearchTerm] = useAtom(searchTermAtom);
+  const cartLength = useAtomValue(cartLengthAtom);
+  const totalItemCount = useAtomValue(totalItemCountAtom);
 
-export const Header: React.FC<HeaderProps> = ({
-  isAdmin,
-  setIsAdmin,
-  searchTerm,
-  setSearchTerm,
-  cartLength,
-  totalItemCount,
-}) => {
   return (
     <header className='bg-white shadow-sm sticky top-0 z-40 border-b'>
       <div className='max-w-7xl mx-auto px-4'>
